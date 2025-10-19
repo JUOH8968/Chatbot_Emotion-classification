@@ -1,0 +1,8 @@
+# 현재 프로젝트에서는 특별히 설치할 시스템 패키지가 없습니다.
+# 파일이 존재해야 Streamlit Cloud가 설치 단계를 건너뛸 수 있습니다.
+
+streamlit
+transformers
+torch
+numpy
+scikit-learn
