@@ -23,7 +23,7 @@
  3) 사용자가 입력한것을 요약 하는것을 구현해보기
 
 
-## 웹페이지 제작
+## 제작한 웹페이지
 https://chatbot-emotion-classification.streamlit.app/
 
 ## 사용한 LLM모델
