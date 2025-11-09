@@ -1,0 +1,14 @@
+# .gitignore 파일 내용
+
+# 1. Streamlit Secrets 파일 (가장 중요)
+# DB 비밀번호가 포함된 파일을 Git 추적에서 제외
+.streamlit/secrets.toml
+
+# 2. 파이썬 컴파일된 파일 (선택 사항이지만 권장됨)
+# Python이 실행될 때 생성되는 불필요한 캐시 파일들
+__pycache__/
+*.pyc
+
+# 3. 모델 가중치 파일 (로컬 저장 시)
+# 모델 파일은 용량이 크므로 Git에 올리지 않고 별도로 관리하는 것이 좋습니다.
+my_emotional_classifier/
