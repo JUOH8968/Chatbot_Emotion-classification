@@ -12,3 +12,7 @@ __pycache__/
 # 3. 모델 가중치 파일 (로컬 저장 시)
 # 모델 파일은 용량이 크므로 Git에 올리지 않고 별도로 관리하는 것이 좋습니다.
 my_emotional_classifier/
+
+# 4. 가상 환경 폴더
+venv/
+env/
