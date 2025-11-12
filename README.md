@@ -25,7 +25,7 @@
 
 
 ## 제작한 웹페이지
-https://chatbot-emotion-classification.streamlit.app/
+https://chatbotemotion-classification.streamlit.app
 
 ## 사용한 LLM모델
 https://huggingface.co/klue/roberta-base
