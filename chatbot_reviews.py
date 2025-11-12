@@ -13,7 +13,7 @@ def load_model():
             model=MODEL_PATH,
             tokenizer=MODEL_PATH
         )
-        st.success("감성 분류 모델 로드 완료!")
+        st.success("감정 분류 모델 로드 완료!")
         return classifier
     except Exception as e:
         st.error(f"❌ **모델 로드 실패!** Hugging Face 모델을 다운로드하거나 초기화하는 데 문제가 발생했습니다. ({e})")
@@ -22,7 +22,7 @@ def load_model():
 classifier = load_model()
 
 # --- Streamlit UI 시작 ---
-st.title('배달 앱 리뷰 감성 분류 봇 🤖')
+st.title('배달 어플 리뷰 감성 분류 봇 🤖')
 st.write('파인튜닝된 KLUE/RoBERTa 모델로 리뷰를 긍정/부정 분류합니다.')
 
 with st.expander("예시 리뷰 보기"):
@@ -36,7 +36,7 @@ if "messages" not in st.session_state:
     st.session_state["messages"] = []
     # 초기 봇 메시지 추가 (선택 사항)
     st.session_state["messages"].append(
-        {"role": "assistant", "content": "안녕하세요! 배달 앱 리뷰를 입력하시면 긍정인지 부정인지 분류해 드립니다."}
+        {"role": "assistant", "content": "안녕하세요! 배달 어플 리뷰를 입력하시면 긍정인지 부정인지 분류해 드립니다."}
     )
 
 # 2. 기존 채팅 기록 표시
@@ -81,4 +81,5 @@ if prompt := st.chat_input("리뷰를 여기에 입력하세요."):
                 error_message = f"❌ **리뷰 분류 중 오류 발생!** 오류 상세: {e}"
                 st.session_state["messages"].append({"role": "assistant", "content": error_message})
                 with st.chat_message("assistant"):
+
                     st.error(error_message)
