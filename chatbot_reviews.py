@@ -22,7 +22,7 @@ def load_model():
 classifier = load_model()
 
 # --- Streamlit UI 시작 ---
-st.title('배달 어플 리뷰 감성 분류 봇 🤖')
+st.title('배달 어플 리뷰 감정 분류 봇 🤖')
 st.write('파인튜닝된 KLUE/RoBERTa 모델로 리뷰를 긍정/부정 분류합니다.')
 
 with st.expander("예시 리뷰 보기"):
@@ -83,3 +83,4 @@ if prompt := st.chat_input("리뷰를 여기에 입력하세요."):
                 with st.chat_message("assistant"):
 
                     st.error(error_message)
+
