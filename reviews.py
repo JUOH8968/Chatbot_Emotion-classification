@@ -1,9 +1,12 @@
 import streamlit as st
 import oracledb
+from transformers import pipeline
 
+# 🚨 중요: 여기에 실제 테이블/시퀀스를 소유한 스키마 이름을 넣어주세요.
+TABLE_NAME = "BOT_REVIEW_LOG"
 
-# db 연결 
-@st.cache_resource
+# db 연결
+# DB 연결 객체를 캐싱하여 재사용
 def get_oracle_connection():
     """Streamlit Secrets에서 DB 정보를 가져와 Oracle DB 연결 객체를 캐싱하여 재사용"""
     
@@ -13,62 +16,79 @@ def get_oracle_connection():
             user=st.secrets["db_credentials"]["user"],
             password=st.secrets["db_credentials"]["password"],
             host=st.secrets["db_credentials"]["host"],
-            port=st.secrets["db_credentials"]["port"],
-            service_name=st.secrets["db_credentials"]["service_name"]
+            port=int(st.secrets["db_credentials"]["port"]), 
+            sid=st.secrets["db_credentials"]["sid"]
         )
-        st.success("Oracle DB 연결 성공! (Secrets 사용)")
+        st.success("✅ Oracle DB 연결 성공! (Secrets 사용)")
         return connection
+    
     except KeyError:
-        # secrets.toml 파일에 해당 정보가 없을 때의 에러 처리
-        st.error("⚠️ Secrets 파일에 DB 연결 정보가 누락되었습니다.")
+        st.error("⚠️ **Secrets 파일에 DB 연결 정보가 누락되었습니다.** `secrets.toml`의 `[db_credentials]` 섹션을 확인하세요.")
         return None
+        
+    except ValueError as e: 
+        st.error(f"⚠️ **포트 값 변환 오류:** 포트 값은 정수여야 합니다. Secrets 파일의 포트 값을 확인하세요. 상세 오류: {e}")
+        return None
+        
     except oracledb.Error as e:
-        # DB 연결 자체가 실패했을 때의 에러 처리 (접근 불가 등)
-        st.error(f"⚠️ Oracle DB 연결 실패 (Secrets 정보 확인됨): {e.args}")
+        error_obj = e.args[0]
+        st.error(f"❌ **Oracle DB 연결 실패**")
+        st.error(f"오류 코드: **{error_obj.code}**")
+        st.error(f"오류 메시지: **{error_obj.message}**")
         return None
 
 # DB 연결 객체 생성
 conn = get_oracle_connection()
 
 
-
 # 챗봇 대화를 db에 저장하는 함수
 def save_chat_log(connection, user_q, classification_result):
     """챗봇 대화 로그를 Oracle DB에 저장"""
+    cursor = None
+    status_message = ""
     if not connection:
-        st.warning("데이터베이스 연결이 설정되지 않아 로그를 저장할 수 없습니다.")
-        return
+        status_message = "⚠️ 데이터베이스 연결이 설정되지 않아 로그를 저장할 수 없습니다."
+        return status_message
 
     try:
         cursor = connection.cursor()
-        
-        # CHATBOT_LOG_SEQ는 이전에 Oracle DB에 생성한 시퀀스 이름입니다.
-        sql_query = """
-        INSERT INTO CHATBOT_LOG (LOG_ID, USER_QUERY, CLASSIFICATION)
-        VALUES (CHATBOT_LOG_SEQ.NEXTVAL, :user_q, :classification_result)
+
+        # 스키마, 테이블, 시퀀스 이름을 모두 큰따옴표로 명시하여 정확한 참조를 보장합니다.
+        sql_query = f"""
+        INSERT INTO {TABLE_NAME} (LOG_ID, USER_QUERY, CLASSIFICATION)
+        VALUES ({TABLE_NAME}_SEQ.NEXTVAL, :user_q, :classification_result)
         """
         
+        # 바인딩 변수 사용: SQL Injection 위험을 줄이고 데이터 타입 안정성을 높입니다.
         cursor.execute(sql_query, 
-                       user_q=user_q, 
-                       classification_result=classification_result)
+                        user_q=user_q, 
+                        classification_result=classification_result)
         
         connection.commit()
-        print("DB 로그 저장 완료") # VS Code 콘솔에 출력됨
+        status_message = f"💾 DB 테이블 '{TABLE_NAME}'에 성공적으로 저장되었습니다."
         
     except oracledb.Error as e:
         error, = e.args
-        st.error(f"데이터 저장 오류 발생: {error.message}")
+        if error.code == 942:
+            status_message = f"⚠️ DB 로그 저장 실패! 테이블/시퀀스 '{TABLE_NAME}'이 존재하지 않거나 권한이 없습니다. (Code: {error.code})"
+        elif error.code == 2289:
+            status_message = f"⚠️ DB 로그 저장 실패! 시퀀스 '{TABLE_NAME}_SEQ'가 존재하지 않습니다. 시퀀스를 생성해야 합니다. (Code: {error.code})"
+        else:
+            status_message = f"⚠️ 데이터 저장 오류 발생: [Code: {error.code}] {error.message}"
         connection.rollback()
+    
     finally:
-        cursor.close()
+        if cursor:
+            cursor.close()
+            
+    # st.info(status_message) # 로그 저장 상태를 확인하고 싶을 때 주석 해제
 
+    return status_message
 
 
 ## 모델 불러오기 
-from transformers import pipeline
-
-# 저장된 모델 경로 (Colab 환경에서 my_emotional_classifier 폴더가 있어야 합니다)
-MODEL_PATH = "ju03/Chatbot_Emotion-classification"   # "./my_emotional_classifier"
+# 저장된 모델 경로 
+MODEL_PATH = "ju03/Chatbot_Emotion-classification" 
 
 # 모델 로드 (앱이 로드될 때 한 번만 실행)
 @st.cache_resource
@@ -80,13 +100,15 @@ def load_model():
             model=MODEL_PATH,
             tokenizer=MODEL_PATH
         )
+        st.success("🧠 감성 분류 모델 로드 완료!")
         return classifier
     except Exception as e:
-        st.error(f"모델 로드 실패! 폴더가 있는지 확인하세요: {e}")
+        st.error(f"❌ **모델 로드 실패!** Hugging Face 모델을 다운로드하거나 초기화하는 데 문제가 발생했습니다. 상세 오류를 콘솔에서 확인하세요. ({e})")
         return None
 
 classifier = load_model()
 
+# --- Streamlit UI 시작 ---
 st.title('배달 앱 리뷰 감성 분류 봇 🤖')
 st.write('파인튜닝된 KLUE/RoBERTa 모델로 리뷰를 긍정/부정 분류합니다.')
 
@@ -106,27 +128,32 @@ if st.button('분류하기'):
     else:
         # 진행률 표시줄
         with st.spinner('리뷰 분석 중...'):
+            try:
+                # ----------------------------------------------------
+                # ✅ 주요 수정 사항: 모델 추론을 try-except로 감싸 오류 포착
+                # ----------------------------------------------------
+                result = classifier(user_query)[0]
+                
+                label = result['label']
+                score = result['score']
 
-            # 예측 수행
-            result = classifier(user_query)[0]
+                # 결과 매핑
+                sentiment = '긍정 👍' if label == 'LABEL_1' else '부정 👎'
+                classification_result = '긍정' if label == 'LABEL_1' else '부정'
+                
+                # DB 로깅
+                if conn:
+                    # conn이 연결되어 있으면, 분류 결과(긍정/부정)를 담아 로그 저장
+                    log_status = save_chat_log(conn, user_query, classification_result)
+                    st.info(log_status) # 선택 사항: 로그 저장 상태 표시
 
-        label = result['label']
-        score = result['score']
-
-        # 결과 매핑
-        sentiment = '긍정 👍' if label == 'LABEL_1' else '부정 👎'
-        
-        if label=='LABEL_1':
-            classification_result= '긍정'
-            if conn:
-                save_chat_log(conn, user_query,  classification_result)
-        elif label=='LABEL_0':
-            classification_result= '부정'
-            if conn:
-                save_chat_log(conn, user_query, classification_result)
-  
-
-        st.success('✅ 분류 완료!')
-        st.metric(label="분류 결과", value=sentiment)
-        st.info(f"신뢰도: {score*100:.2f}%")
-
+                # 결과 출력
+                st.success('✅ 분류 완료!')
+                st.metric(label="분류 결과", value=sentiment)
+                st.info(f"신뢰도: {score*100:.2f}%")
+                
+            except Exception as e:
+                # 오류 발생 시 사용자에게 명확하게 알림
+                st.error(f"❌ **리뷰 분류 중 심각한 오류가 발생했습니다.**")
+                st.error(f"오류 상세: {e}")
+                st.warning("Streamlit을 재시작하거나, 콘솔 창에서 상세 오류 로그를 확인해 주세요.")
