@@ -25,10 +25,13 @@ classifier = load_model()
 st.title('배달 어플 리뷰 감정 분류 봇 🤖')
 st.write('파인튜닝된 KLUE/RoBERTa 모델로 리뷰를 긍정/부정 분류합니다.')
 
-with st.expander("예시 리뷰 보기"):
+with st.expander("잘된 예시 리뷰 보기"):
     st.write("👍 긍정 예시: 사장님이 너무 친절하시고 서비스도 좋아서 다음에도 꼭 주문하고 싶어요!")
     st.write("👎 부정 예시: 주문한 메뉴가 잘못 왔고, 포장이 엉망이라 다 식어서 왔네요.")
 
+with st.expander("잘못된 예시 리뷰 보기"):
+    st.write("👍 긍정 예시: 맛있음")
+    st.write("👎 부정 예시: 맛별로")
 
 
 # 1. 채팅 기록 저장을 위한 session_state 초기화
@@ -83,5 +86,6 @@ if prompt := st.chat_input("리뷰를 문장으로 여기에 입력하세요."):
                 with st.chat_message("assistant"):
 
                     st.error(error_message)
+
 
 
