@@ -46,7 +46,7 @@ for message in st.session_state["messages"]:
 
 # 3. 사용자 입력 처리 (st.chat_input 사용)
 # 사용자가 새로운 리뷰를 입력했을 때만 실행됩니다.
-if prompt := st.chat_input("리뷰를 여기에 입력하세요."):
+if prompt := st.chat_input("리뷰를 문장으로 여기에 입력하세요."):
     if not classifier:
         st.warning("모델이 로드되지 않아 분류를 진행할 수 없습니다.")
     else:
@@ -83,4 +83,5 @@ if prompt := st.chat_input("리뷰를 여기에 입력하세요."):
                 with st.chat_message("assistant"):
 
                     st.error(error_message)
+
 
